@@ -1,0 +1,7 @@
+# PIDE - Persistent Isolated Development Environment(s)
+
+
+Notes:
+
+    - We need a working path when building docker images
+    - Should probably have a sanitize option, return file ownership to user, unmark executable bits?
