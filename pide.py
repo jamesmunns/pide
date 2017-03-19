@@ -58,7 +58,7 @@ def resume(args):
     temp_name = str(uuid.uuid4())
 
     # Todo: allowable run args?
-    x = Popen(["docker", "run", "--name", temp_name, "-it", name, "/bin/bash"])
+    x = Popen(["docker", "run", "-v", "{}:/host".format(os.getcwd()), "--name", temp_name, "-it", name, "/bin/bash"])
 
     # This is maybe a bad idea? seems to work...
     while(True):
