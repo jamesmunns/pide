@@ -9,6 +9,8 @@ import time
 from subprocess import check_output as cmd
 from subprocess import Popen
 
+PIDE_VERSION = "0.1.0"
+
 def init(args):
     dockerfile = args[0]
     workingpath = os.path.dirname(dockerfile) # todo, don't hardcode this
@@ -26,6 +28,7 @@ def init(args):
             "image_id": image_id,
             "original_dockerfile": dockerfile,
             "original_workingpath": workingpath,
+            "pide_version": PIDE_VERSION,
         }
 
         json.dump(data, ofile, sort_keys=True, indent=4, separators=(',', ': '))
@@ -36,16 +39,20 @@ def resume(args):
     with open('.pide', 'r') as ifile:
         pidef = json.load(ifile)
 
+    assert pidef["pide_version"] == PIDE_VERSION, "TODO: Handle pide versioning inconsistencies"
+
     existing_images = cmd(["docker", "images"]).decode()
+
+    dockerfile = os.path.basename(pidef["original_dockerfile"])
 
     # Whooo... are yoooouuuu?
     if pidef["name"].split(':')[-1] not in existing_images:
         # probably never been comitted before. Use the image id
-        print("first!")
+        print("Running `{}` for the first time...".format(dockerfile))
         name = pidef["image_id"]
     else:
         # probably has been comitted before. Use the comitted name
-        print("resuming!")
+        print("Resuming `{}` where you left off...".format(dockerfile))
         name = pidef["name"]
 
     temp_name = str(uuid.uuid4())
