@@ -14,7 +14,7 @@ def init(args):
     workingpath = os.path.dirname(dockerfile) # todo, don't hardcode this
 
     # NOTE: name isn't necessary yet. Don't hardcode it in the creation.
-    name = str(uuid.uuid4())
+    name = "pide:{}".format(str(uuid.uuid4()))
 
     print("Building dockerfile (if necessary)...")
     output = cmd(["docker", "build", "-f", dockerfile, workingpath])
@@ -39,7 +39,7 @@ def resume(args):
     existing_images = cmd(["docker", "images"]).decode()
 
     # Whooo... are yoooouuuu?
-    if pidef["name"] not in existing_images:
+    if pidef["name"].split(':')[-1] not in existing_images:
         # probably never been comitted before. Use the image id
         print("first!")
         name = pidef["image_id"]
