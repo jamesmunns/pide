@@ -1,13 +1,10 @@
+use std::path::Path;
+
 use clap::{App, SubCommand, Arg};
 use uuid::Uuid;
-use std::path::Path;
-use std::process::Command;
 
-use toml;
-use std::io::prelude::*;
-use std::fs::File;
-use std::env::current_dir;
-
+use docker;
+use types::{PideFile, PideName};
 
 
 pub fn parse_cli() {
@@ -26,6 +23,10 @@ pub fn parse_cli() {
         .subcommand(SubCommand::with_name("resume")
             .about("Resume an existing pide"))
 
+        // "pide ssh"
+        .subcommand(SubCommand::with_name("ssh")
+            .about("Attach to a running pide"))
+
         .get_matches();
 
     match matches.subcommand() {
@@ -36,7 +37,20 @@ pub fn parse_cli() {
         ("resume", _) => {
             resume();
         }
+        ("ssh", _) => {
+            ssh();
+        }
         _ => println!("Hallo, welt!"),
+    }
+}
+
+// Okay, its not really ssh. But it acts a lot like it
+fn ssh() {
+    if let Some(id) = docker::get_image_name(&PideFile::from_file(".pide").name) {
+        println!("Joining container in progress...");
+        docker::ssh_attach(&id);
+    } else {
+        println!("Container not running. Try `pide resume` first.");
     }
 }
 
@@ -45,148 +59,37 @@ fn resume() {
     let pide_data = PideFile::from_file(".pide");
     assert_eq!(pide_data.pide_version, "0.2.0", "Version Mismatch!");
 
-    let output = Command::new("docker")
-        .arg("images")
-        .output()
-        .expect("Failed to get existing images")
-        .stdout;
-
-    let existing_images = String::from_utf8_lossy(&output);
-
     let dockerfile = pide_data.original_dockerfile;
-    let id: String = pide_data.name.id.to_string();
     let name_str = pide_data.name.to_string();
-
-    let name = if !existing_images.contains(&id) {
-        println!("Running `{}` for the first time...", &dockerfile);
-        &pide_data.image_id
-    } else {
-        println!("Resuming `{}`...", &dockerfile);
-        &name_str
-    };
-
     let temp_name = Uuid::new_v4().to_string();
 
-    let _ = Command::new("docker")
-        .arg("run")
-        .arg("-v")
-        .arg(format!("{}:/host",
-                     current_dir()
-                         .expect("failed to get cwd")
-                         .to_str()
-                         .expect("bad utf-8 in cwd")))
-        .arg("--name")
-        .arg(&temp_name)
-        .arg("-it")
-        .arg(&name)
-        .arg("/bin/bash")
-        .spawn()
-        .expect("Docker failed to launch")
-        .wait()
-        .expect("Docker failed at runtime");
+    println!("Resuming `{}`...", &dockerfile);
+    docker::run(&temp_name, &name_str);
 
     println!("Committing container history...");
-    let _ = Command::new("docker")
-        .arg("commit")
-        .arg(&temp_name)
-        .arg(&name_str)
-        .output()
-        .expect("Failed to commit docker changes");
-
+    docker::commit(&temp_name, &name_str);
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct PideName {
-    repo: String,
-    id: Uuid,
-}
-
-impl PideName {
-    pub fn new() -> Self {
-        Self {
-            repo: "pide".to_string(),
-            id: Uuid::new_v4(),
-        }
-    }
-
-    pub fn to_string(&self) -> String {
-        format!("{}:{}", &self.repo, self.id.to_string())
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PideFile {
-    image_id: String,
-    original_dockerfile: String, // TODO: not a string?
-    original_workingpath: String, // TODO: not a string?
-    pide_version: String, // TODO: not a string?
-
-    // Tables go last
-    name: PideName,
-}
-
-impl PideFile {
-    pub fn to_string(&self) -> Result<String, ()> {
-        match toml::to_string(self) {
-            Ok(out) => Ok(out),
-            Err(x) => {
-                println!("bad: {:?}", x);
-                Err(())
-            }
-        }
-    }
-
-    pub fn from_file(open_path: &str) -> Self {
-
-        let mut file = File::open(open_path)
-            .expect(&format!("Failed to open pide file {:}", open_path));
-        let mut contents = String::new();
-        let _ = file.read_to_string(&mut contents);
-        toml::from_str(&contents).expect("yiss")
-    }
-}
 
 fn init(dockerfile: &str) {
-    // println!("{}", dockerfile);
-
-    // println!("{:?}", PideName::new().to_string());
     let dfp = Path::new(dockerfile);
     let working_path = dfp.parent().expect("Failed to choose working path");
 
     assert!(dfp.is_file(), "Dockerfile doesn't exist");
     assert!(working_path.exists(), "Working path doesn't exist");
 
-    let build_cmd = Command::new("docker")
-        .arg("build")
-        .arg("-f")
-        .arg(dockerfile)
-        .arg(working_path)
-        .output()
-        .expect("Failed to build base docker image!");
+    let pide_name = PideName::new();
 
-    let image_id = String::from_utf8_lossy(&build_cmd.stdout)
-        .lines()
-        .last()
-        .expect("Unexpected Docker Output!")
-        .split(' ')
-        .last()
-        .expect("Failed to decode image id")
-        .to_string();
+    let image_id = docker::build(&pide_name.to_string(), dockerfile, working_path);
 
     let pide_data = PideFile {
-        name: PideName::new(),
+        name: pide_name,
         image_id: image_id,
         original_dockerfile: dockerfile.to_string(),
         original_workingpath: working_path.to_str().unwrap().to_string(),
         pide_version: "0.2.0".to_string(),
     };
 
-    println!("{:?}", pide_data);
+    pide_data.to_file(".pide");
 
-    let open_path = ".pide";
-
-    let mut file = File::create(open_path)
-        .expect(&format!("Failed to open pide file {:}", open_path));
-    let _ = file.write_all(&pide_data.to_string().expect("sadfoo").into_bytes())
-        .expect("Failed to write to pide file");
 }
