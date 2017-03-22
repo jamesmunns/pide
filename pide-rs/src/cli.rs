@@ -1,4 +1,4 @@
-use clap::{App, SubCommand, ArgMatches, Arg};
+use clap::{App, SubCommand, Arg};
 use uuid::Uuid;
 use std::path::Path;
 use std::process::Command;
@@ -58,16 +58,16 @@ fn resume() {
     let name_str = pide_data.name.to_string();
 
     let name = if !existing_images.contains(&id) {
-        println!("Running for the first time...");
+        println!("Running `{}` for the first time...", &dockerfile);
         &pide_data.image_id
     } else {
-        println!("Resuming...");
+        println!("Resuming `{}`...", &dockerfile);
         &name_str
     };
 
     let temp_name = Uuid::new_v4().to_string();
 
-    let process = Command::new("docker")
+    let _ = Command::new("docker")
         .arg("run")
         .arg("-v")
         .arg(format!("{}:/host",
