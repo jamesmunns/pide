@@ -4,11 +4,12 @@ Use docker to create fully persistent and isolated development environments. Thi
 
 ## Installation
 
-Todo. Right now we don't install anywhere. I'd suggest cloning this repository, and setting up a bash alias for `pide` to `<clone_dir>/pide.py`, e.g. `alias pide=~/git/pide/pide.py`.
+If you have rust + cargo installed: `cargo install pide-rs`.
+
+Binaries coming soon.
 
 ### Dependencies
 
-* python3
 * docker (tested with v17.03)
 
 ## Usage
@@ -62,7 +63,7 @@ root@9691f706c0e5:/# ls -l | grep hello_file
 
 ## Multiple Instances
 
-If you re-use the same dockerfile in separate places, they will not interact with eachother (though the `init` stage will run much faster, as the original cached docker image is used). Example:
+If you re-use the same dockerfile in separate places, they will not interact with each other (though the `init` stage will run much faster, as the original cached docker image is used). Example:
 
 ```bash
 ~ mkdir demo2

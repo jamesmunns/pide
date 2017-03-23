@@ -1,0 +1,24 @@
+[package]
+name = "pide-rs"
+version = "0.2.2"
+authors = ["James Munns <james.munns@gmail.com>"]
+description = "Persistent Isolated Development Environments (in Docker)"
+license = "MIT"
+homepage = "https://github.com/jamesmunns/pide"
+repository = "https://github.com/jamesmunns/pide"
+documentation = "https://docs.rs/pide-rs"
+
+[dependencies]
+clap = "2"
+log = "0.3"
+
+toml = "0.3"
+serde = "0.9"
+serde_derive = "0.9"
+uuid = { version = "0.4", features = ["serde", "v4"] }
+
+[profile.release]
+lto = true
+
+[[bin]]
+name = "pide"
