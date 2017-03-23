@@ -2,6 +2,12 @@
 
 Use docker to create fully persistent and isolated development environments. Think `virtualenv` from the python world, only for a whole system.
 
+## Use case
+
+I develop a lot of proof of concept and rapidly prototyped embedded systems. This means I end up with a lot of vendor-specific toolchains and components. Often instructions provided by a vendor will only work with very specific environment versions (e.g. "Only works on Ubuntu 14.04 with Python 2.6 and GCC 4.8.4").
+
+This tool allows me to isolate each of those environments within a docker container, while also allowing me to still use the workflow I am used to.
+
 ## Installation
 
 If you have rust + cargo installed: `cargo install pide-rs`.
